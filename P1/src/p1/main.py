@@ -10,12 +10,12 @@ base_url = "https://old.reddit.com/r/spain/new/"
 # print("Processing posts from " + base_url + ", please wait...")
 res = requests.get(base_url)
 html = BeautifulSoup(res.text, "html.parser")
-siteTable = html.find("div", attrs={"id":"siteTable"})
-posts = siteTable.findAll("div", attrs={"class":"link"})
+siteTable = html.find("div", attrs={"id": "siteTable"})
+posts = siteTable.findAll("div", attrs={"class": "link"})
 users = []
 for post in posts:
     # print(post)
-    user = post.find("a", attrs={"class":"author"})
+    user = post.find("a", attrs={"class": "author"})
     if user != None:
         # print(user.text)
         users.append(user.text)
@@ -25,52 +25,51 @@ print(users)
 users = list(dict.fromkeys(users))
 data = []
 for user in users:
-    #print("Scrapping " + user + "...")
+    # print("Scrapping " + user + "...")
     user_url = "https://old.reddit.com/user/" + user
     # print(user_url)
     time.sleep(1)
-    #print(user_url)
+    # print(user_url)
     res = requests.get(user_url)
     html = BeautifulSoup(res.text, "html.parser")
 
     # print(html)
 
     # Karma
-    side = html.find("div", attrs={"class":"side"})
+    side = html.find("div", attrs={"class": "side"})
 
     karma = 0
     if side != None:
-        post_karma = side.find("span", attrs={"class":"karma"}).text
-        comment_karma = side.find("span", attrs={"class":"comment-karma"}).text
+        post_karma = side.find("span", attrs={"class": "karma"}).text
+        comment_karma = side.find("span", attrs={"class": "comment-karma"}).text
 
-        karma = int(post_karma.replace(',','')) + int(comment_karma.replace(',',''))
+        karma = int(post_karma.replace(",", "")) + int(comment_karma.replace(",", ""))
 
-#    else:
-        #print("[ERROR]: No se pudo acceder a: " + user_url)
+    #    else:
+    # print("[ERROR]: No se pudo acceder a: " + user_url)
 
     posts = []
     comments = []
     # Posts & Comments
     if side != None:
-        siteTable = html.find("div", attrs={"id":"siteTable"})
-
+        siteTable = html.find("div", attrs={"id": "siteTable"})
 
         if siteTable != None:
-            things = siteTable.findAll("div", attrs={"class":"thing"})
-            
+            things = siteTable.findAll("div", attrs={"class": "thing"})
+
             for thing in things:
-                if thing['data-subreddit'] == "spain":
-                    if thing['data-type'] == "link":
-                        top_matter = thing.find("div", attrs={"class":"top-matter"})
-                        title_all = top_matter.find("a", attrs={"class":"title"})
+                if thing["data-subreddit"] == "spain":
+                    if thing["data-type"] == "link":
+                        top_matter = thing.find("div", attrs={"class": "top-matter"})
+                        title_all = top_matter.find("a", attrs={"class": "title"})
                         title = title_all.text
                         desc = ""
-                        tagline = top_matter.find("p", attrs={"class":"tagline"})
-                        date = tagline.find("time")['title']
+                        tagline = top_matter.find("p", attrs={"class": "tagline"})
+                        date = tagline.find("time")["title"]
 
                         pattern = re.compile("/r/spain/.*")
-                        if pattern.match(title_all['href']):
-                            url_post = "https://old.reddit.com" + title_all['href']
+                        if pattern.match(title_all["href"]):
+                            url_post = "https://old.reddit.com" + title_all["href"]
 
                             time.sleep(1)
                             # print(url_post)
@@ -79,35 +78,37 @@ for user in users:
 
                             expando = html_post.find("div", attrs={"class": "expando"})
                             if expando != None:
-                                md = expando.find("div", attrs={"class":"md"})
+                                md = expando.find("div", attrs={"class": "md"})
                                 if md != None:
                                     desc = md.text
-                        
+
                             posts.append(
                                 {
-                                    "title" : title,
+                                    "title": title,
                                     "post_url": url_post,
                                     "date": date,
                                     "desc": desc,
-                                    "author": user
+                                    "author": user,
                                 }
                             )
 
-                    elif thing['data-type'] == "comment":
-                        parent = thing.find("p", attrs={"class":"parent"})
+                    elif thing["data-type"] == "comment":
+                        parent = thing.find("p", attrs={"class": "parent"})
                         if parent != None:
-                            title = parent.find("a", attrs={"class":"title"})
-                            post = title['href']
+                            title = parent.find("a", attrs={"class": "title"})
+                            post = title["href"]
 
-                            entry = thing.find("div", attrs={"class":"entry"})
+                            entry = thing.find("div", attrs={"class": "entry"})
 
-                            tagline = entry.find("p", attrs={"class":"tagline"})
-                            date = tagline.find("time")['title']
+                            tagline = entry.find("p", attrs={"class": "tagline"})
+                            date = tagline.find("time")["title"]
 
-                            usertext_body = entry.find("div", attrs={"class":"usertext-body"})
+                            usertext_body = entry.find(
+                                "div", attrs={"class": "usertext-body"}
+                            )
 
                             if usertext_body != None:
-                                md = usertext_body.find("div", attrs={"class":"md"})
+                                md = usertext_body.find("div", attrs={"class": "md"})
                                 if md != None:
                                     text = md.text
 
@@ -116,19 +117,14 @@ for user in users:
                                             "text": text,
                                             "date": date,
                                             "parent": post,
-                                            "author": user
+                                            "author": user,
                                         }
                                     )
                     else:
                         print("[ERROR]: No es ni post ni comentario")
 
     data.append(
-        {
-            "username": user,
-            "karma": karma,
-            "posts": posts,
-            "comments": comments
-        }
+        {"username": user, "karma": karma, "posts": posts, "comments": comments}
     )
 
 print(data)
