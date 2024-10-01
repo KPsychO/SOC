@@ -1,17 +1,16 @@
 import requests
 from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
+import argparse
 
-# from ratelimit import limits
+# Global vars
+_BASE_URL = "https://old.reddit.com"
+_BASE_URL_USER = _BASE_URL + "/user/"
 
 # Configure a requests session to implement retries in case of an invalid server response
 ses = requests.Session()
 retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504])
 ses.mount("https://", HTTPAdapter(max_retries=retries))
-TIME_LIMIT = 1
-
-# @limits(calls=1, period=TIME_LIMIT)
-
 
 def make_request(url):  # makes a request using the session configured previously
     res = ses.get(url)
@@ -91,11 +90,9 @@ def process_post_comment_data_from_userList(
         for thing in things:
             if thing["data-subreddit"] == subreddit:
                 if thing["data-type"] == "link":
-                    # scrap_user_posts(posts, thing, user)
-                    posts.append(base_url + thing["data-permalink"])
+                    posts.append(_BASE_URL + thing["data-permalink"])
                 elif thing["data-type"] == "comment":
-                    # scrap_user_comments(comments, thing, user)
-                    comments.append(base_url + thing["data-permalink"])
+                    comments.append(_BASE_URL + thing["data-permalink"])
 
 
 def obtain_user_karma(
@@ -114,10 +111,10 @@ def obtain_user_karma(
 
 
 def process_user_data(
-    user_data_json, base_url_user, users_list, subreddit
-):  # Creates the URL for a user profile from a given username and scraps itś karma, posts and comments in r/spain
+    user_data_json, users_list, subreddit
+):  # Creates the URL for a user profile from a given username and scraps its karma, posts and comments in the subreddit
     for user in users_list:
-        user_url = base_url_user + user
+        user_url = _BASE_URL_USER + user
         html = make_request(user_url)
 
         # Karma
@@ -132,11 +129,23 @@ def process_user_data(
         )
 
 
-base_url = "https://old.reddit.com"
-base_url_user = "https://old.reddit.com/user/"
-subreddit = "spain"
 
-html = make_request(base_url + "/r/" + subreddit + "/new/")
+parser = argparse.ArgumentParser()
+parser.add_argument('-t', '--type')
+parser.add_argument('-s', '--subreddit')
+parser.add_argument('-o', '--output')
+
+args = parser.parse_args()
+
+_type = args.type
+_subreddit = args.subreddit
+_output_file = args.output
+
+print("Redit Scrapper")
+print(" Scrapping subreddit: " + _BASE_URL + "/r/" + _subreddit + "/" + _type + "/")
+print(" Outputting data to: " + _output_file + ".json")
+
+html = make_request(_BASE_URL + "/r/" + _subreddit + "/" + _type + "/")
 
 siteTable = html.find("div", attrs={"id": "siteTable"})
 things = siteTable.findAll("div", attrs={"class": "thing"})
@@ -144,17 +153,18 @@ things = siteTable.findAll("div", attrs={"class": "thing"})
 users = []
 posts = []
 for thing in things:
-    # COMPROBAR QUE LA CLAVE EXISTE
     if "data-permalink" in thing.attrs:
         posts.append(thing["data-permalink"])
     else:
-        print("[DEBUG]: tag (data-permalink) not found")
+        print("[DEBUG]: tag (data-permalink) not found -> ???")
 
     if "data-author" in thing.attrs:
         users.append(thing["data-author"])
     else:
-        print("[DEBUG]: tag (data-author) not found")
+        print("[DEBUG]: tag (data-author) not found -> User account was deleted")
+
+users = list(dict.fromkeys(users))
 
 user_data_json = []
-process_user_data(user_data_json, base_url_user, users, subreddit)
+process_user_data(user_data_json, users, _subreddit)
 print(user_data_json)
