@@ -137,9 +137,17 @@ def save_file(file, data):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-t", "--type", help = "Type of scrapping: ['', 'new', 'rising', 'top']")
-parser.add_argument("-s", "--subreddit", help = "Subreddit to scrap: spain, europe, spicypillows...")
-parser.add_argument("-o", "--output", help = "Choose the output file name, will have the following format: user_FILENAME.json")
+parser.add_argument(
+    "-t", "--type", help="Type of scrapping: ['', 'new', 'rising', 'top']"
+)
+parser.add_argument(
+    "-s", "--subreddit", help="Subreddit to scrap: spain, europe, spicypillows..."
+)
+parser.add_argument(
+    "-o",
+    "--output",
+    help="Choose the output file name, will have the following format: user_FILENAME.json",
+)
 
 args = parser.parse_args()
 
