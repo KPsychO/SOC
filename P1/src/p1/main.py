@@ -131,15 +131,15 @@ def process_user_data(
         )
 
 
-def save_file(_output_file, data):
-    with open(_output_file + ".json", "w", encoding="utf-8") as f:
+def save_file(file, data):
+    with open(file + ".json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=3)
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-t", "--type")
-parser.add_argument("-s", "--subreddit")
-parser.add_argument("-o", "--output")
+parser.add_argument("-t", "--type", help = "Type of scrapping: ['', 'new', 'rising', 'top']")
+parser.add_argument("-s", "--subreddit", help = "Subreddit to scrap: spain, europe, spicypillows...")
+parser.add_argument("-o", "--output", help = "Choose the output file name, will have the following format: user_FILENAME.json")
 
 args = parser.parse_args()
 
