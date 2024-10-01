@@ -1,7 +1,6 @@
 import requests
 from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
-import time
 import re
 
 # Configure a requests session to implement retries in case of an invalid server response
@@ -28,8 +27,7 @@ def scrap_user_posts(
     if pattern.match(title_all["href"]):
         url_post = "https://old.reddit.com" + title_all["href"]
 
-        time.sleep(1)
-        res_post = requests.get(url_post)
+        res_post = make_request(url_post)
         html_post = BeautifulSoup(res_post.text, "html.parser")
 
         expando = html_post.find("div", attrs={"class": "expando"})
@@ -108,7 +106,6 @@ def process_user_data(
 ):  # Creates the URL for a user profile from a given username and scraps itś karma, posts and comments in r/spain
     for user in users_list:
         user_url = base_url_user + user
-        time.sleep(1)
         res = make_request(user_url)
         html = BeautifulSoup(res.text, "html.parser")
 
