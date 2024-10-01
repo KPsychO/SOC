@@ -2,6 +2,7 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
 import argparse
+import json
 
 # Global vars
 _BASE_URL = "https://old.reddit.com"
@@ -9,8 +10,9 @@ _BASE_URL_USER = _BASE_URL + "/user/"
 
 # Configure a requests session to implement retries in case of an invalid server response
 ses = requests.Session()
-retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504])
+retries = Retry(total=5, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
 ses.mount("https://", HTTPAdapter(max_retries=retries))
+
 
 def make_request(url):  # makes a request using the session configured previously
     res = ses.get(url)
@@ -80,8 +82,8 @@ def make_request(url):  # makes a request using the session configured previousl
 #                 )
 
 
-def process_post_comment_data_from_userList(
-    posts, comments, html, user, subreddit
+def obtain_user_posts_comments(
+    posts, comments, html, subreddit
 ):  # Proces a given html to scrap a user posts and comments in a given subredit
     siteTable = html.find("div", attrs={"id": "siteTable"})
     if siteTable != None:
@@ -111,7 +113,7 @@ def obtain_user_karma(
 
 
 def process_user_data(
-    user_data_json, users_list, subreddit
+    user_data, users_list, subreddit
 ):  # Creates the URL for a user profile from a given username and scraps its karma, posts and comments in the subreddit
     for user in users_list:
         user_url = _BASE_URL_USER + user
@@ -123,17 +125,21 @@ def process_user_data(
         # Posts & Comments
         posts = []
         comments = []
-        process_post_comment_data_from_userList(posts, comments, html, user, subreddit)
-        user_data_json.append(
+        obtain_user_posts_comments(posts, comments, html, subreddit)
+        user_data.append(
             {"username": user, "karma": karma, "posts": posts, "comments": comments}
         )
 
 
+def save_file(_output_file, data):
+    with open(_output_file + ".json", "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=3)
+
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-t', '--type')
-parser.add_argument('-s', '--subreddit')
-parser.add_argument('-o', '--output')
+parser.add_argument("-t", "--type")
+parser.add_argument("-s", "--subreddit")
+parser.add_argument("-o", "--output")
 
 args = parser.parse_args()
 
@@ -141,9 +147,12 @@ _type = args.type
 _subreddit = args.subreddit
 _output_file = args.output
 
-print("Redit Scrapper")
+print("Reddit Scrapper")
 print(" Scrapping subreddit: " + _BASE_URL + "/r/" + _subreddit + "/" + _type + "/")
-print(" Outputting data to: " + _output_file + ".json")
+print(" Outputting data to: data_type" + _output_file + ".json")
+print(
+    "--------------------------------------------------------------------------------------"
+)
 
 html = make_request(_BASE_URL + "/r/" + _subreddit + "/" + _type + "/")
 
@@ -165,6 +174,6 @@ for thing in things:
 
 users = list(dict.fromkeys(users))
 
-user_data_json = []
-process_user_data(user_data_json, users, _subreddit)
-print(user_data_json)
+user_data = []
+process_user_data(user_data, users, _subreddit)
+save_file("user_" + _output_file, user_data)
