@@ -1,12 +1,16 @@
 import requests
 from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
-import re
+
+# from ratelimit import limits
 
 # Configure a requests session to implement retries in case of an invalid server response
 ses = requests.Session()
 retries = Retry(total=5, backoff_factor=0.5, status_forcelist=[429, 500, 502, 503, 504])
 ses.mount("https://", HTTPAdapter(max_retries=retries))
+TIME_LIMIT = 1
+
+# @limits(calls=1, period=TIME_LIMIT)
 
 
 def make_request(url):  # makes a request using the session configured previously
@@ -88,20 +92,25 @@ def process_post_comment_data_from_userList(
             if thing["data-subreddit"] == subreddit:
                 if thing["data-type"] == "link":
                     # scrap_user_posts(posts, thing, user)
-                    posts.append(thing['data-permalink'])
+                    posts.append(base_url + thing["data-permalink"])
                 elif thing["data-type"] == "comment":
                     # scrap_user_comments(comments, thing, user)
-                    comments.append(thing['data-permalink'])
+                    comments.append(base_url + thing["data-permalink"])
 
 
 def obtain_user_karma(
-    karma, html
+    html,
 ):  # Extracts the total user karma (post+comments karma) from a given html
+
     side = html.find("div", attrs={"class": "side"})
     if side != None:
         post_karma = side.find("span", attrs={"class": "karma"}).text
-        comment_karma = side.find("span", attrs={"class": "comment-karma"}).text
+        comment_karma = side.find("span", attrs={"class": "karma comment-karma"}).text
         karma = int(post_karma.replace(",", "")) + int(comment_karma.replace(",", ""))
+        return karma
+    else:
+        print("[DEBUG]: User account is NSFW, therefore, can´t be scrapped")
+        return -1
 
 
 def process_user_data(
@@ -112,8 +121,7 @@ def process_user_data(
         html = make_request(user_url)
 
         # Karma
-        karma = 0
-        obtain_user_karma(karma, html)
+        karma = obtain_user_karma(html)
 
         # Posts & Comments
         posts = []
@@ -124,11 +132,11 @@ def process_user_data(
         )
 
 
-base_url = "https://old.reddit.com/r/spain/new/"
+base_url = "https://old.reddit.com"
 base_url_user = "https://old.reddit.com/user/"
 subreddit = "spain"
 
-html = make_request(base_url)
+html = make_request(base_url + "/r/" + subreddit + "/new/")
 
 siteTable = html.find("div", attrs={"id": "siteTable"})
 things = siteTable.findAll("div", attrs={"class": "thing"})
@@ -136,13 +144,16 @@ things = siteTable.findAll("div", attrs={"class": "thing"})
 users = []
 posts = []
 for thing in things:
-    # print(thing)
-    # print(thing['data-permalink'])
-    # print(thing['data-author'])
-    
     # COMPROBAR QUE LA CLAVE EXISTE
-    posts.append(thing['data-permalink'])
-    users.append(thing['data-author'])
+    if "data-permalink" in thing.attrs:
+        posts.append(thing["data-permalink"])
+    else:
+        print("[DEBUG]: tag (data-permalink) not found")
+
+    if "data-author" in thing.attrs:
+        users.append(thing["data-author"])
+    else:
+        print("[DEBUG]: tag (data-author) not found")
 
 user_data_json = []
 process_user_data(user_data_json, base_url_user, users, subreddit)
