@@ -1,5 +1,4 @@
 import requests
-from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
 import argparse
 import json
@@ -12,16 +11,11 @@ _CALLS = 2
 _BASE_URL = "https://old.reddit.com"
 _BASE_URL_USER = _BASE_URL + "/user/"
 
-# Configure a requests session to implement retries in case of an invalid server response
-ses = requests.Session()
-retries = Retry(total=5, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
-ses.mount("https://", HTTPAdapter(max_retries=retries))
-
 
 @sleep_and_retry
 @limits(calls=_CALLS, period=_PERIOD)
 def make_request(url):  # makes a request using the session configured previously
-    res = ses.get(url)
+    res = requests.get(url)
     return BeautifulSoup(res.text, "html.parser")
 
 
