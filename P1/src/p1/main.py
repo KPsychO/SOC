@@ -76,29 +76,30 @@ def process_user_data(
 def process_comment_data(comment_data, comments, post_url):
     for comment in comments:
         # Comment URL
-        comment_url = _BASE_URL + comment["data-permalink"]
+        if "data-permalink" in comment.attrs:
+            comment_url = _BASE_URL + comment["data-permalink"]
 
-        # Text
-        text = comment.find("div", attrs={"class": "usertext-body"}).text
+            # Text
+            text = comment.find("div", attrs={"class": "usertext-body"}).text
 
-        # Date
-        date = comment.find("time")["title"]
+            # Date
+            date = comment.find("time")["title"]
 
-        # Author
-        if "data-author" in comment.attrs:
-            author = comment["data-author"]
-        else:
-            author = "Deleted Account"
+            # Author
+            if "data-author" in comment.attrs:
+                author = comment["data-author"]
+            else:
+                author = "Deleted Account"
 
-        comment_data.append(
-            {
-                "comment": comment_url,
-                "text": text,
-                "date": date,
-                "post": post_url,
-                "author": author,
-            }
-        )
+            comment_data.append(
+                {
+                    "comment": comment_url,
+                    "text": text,
+                    "date": date,
+                    "post": post_url,
+                    "author": author,
+                }
+            )
 
 
 def process_post_data(post_data, comment_data, posts_list):
@@ -106,45 +107,49 @@ def process_post_data(post_data, comment_data, posts_list):
         post_url = _BASE_URL + post
         html = make_request(post_url)
         siteTable = html.find("div", attrs={"id": "siteTable"})
-        entry = siteTable.find("div", attrs={"class": "entry"})
 
-        if entry != None:
-            # Title
-            title = entry.find("a", attrs={"class": "title"}).text
+        if siteTable != None:
+            entry = siteTable.find("div", attrs={"class": "entry"})
 
-            # Date
-            date = entry.find("time")["title"]
+            if entry != None:
+                # Title
+                title = entry.find("a", attrs={"class": "title"}).text
 
-            # Description
-            usertext = entry.find("div", attrs={"class": "usertext"})
-            if usertext != None:
-                desc = usertext.find("div", attrs={"class": "md"}).text
-            else:
-                desc = ""
+                # Date
+                date = entry.find("time")["title"]
 
-            # Author
-            author_class = entry.find("a", attrs={"class": "author"})
-            if author_class != None:
-                author = author_class.text
-            else:
-                author = "Deleted Account"
+                # Description
+                usertext = entry.find("div", attrs={"class": "usertext"})
+                if usertext != None:
+                    desc = usertext.find("div", attrs={"class": "md"}).text
+                else:
+                    desc = ""
 
-            post_data.append(
-                {
-                    "post": post_url,
-                    "title": title,
-                    "date": date,
-                    "description": desc,
-                    "author": author,
-                }
-            )
+                # Author
+                author_class = entry.find("a", attrs={"class": "author"})
+                if author_class != None:
+                    author = author_class.text
+                else:
+                    author = "Deleted Account"
 
-            # Comments
-            commentarea = html.find("div", attrs={"class": "commentarea"})
-            comments_sitetable = commentarea.find("div", attrs={"class": "sitetable"})
-            things = comments_sitetable.findAll("div", attrs={"class": "thing"})
+                post_data.append(
+                    {
+                        "post": post_url,
+                        "title": title,
+                        "date": date,
+                        "description": desc,
+                        "author": author,
+                    }
+                )
 
-            process_comment_data(comment_data, things, post_url)
+                # Comments
+                commentarea = html.find("div", attrs={"class": "commentarea"})
+                comments_sitetable = commentarea.find(
+                    "div", attrs={"class": "sitetable"}
+                )
+                things = comments_sitetable.findAll("div", attrs={"class": "thing"})
+
+                process_comment_data(comment_data, things, post_url)
 
 
 def save_file(file, data):  # Saves the given data in json format to the given file
