@@ -205,11 +205,11 @@ for thing in things:
 users = list(dict.fromkeys(users))
 posts = list(dict.fromkeys(posts))
 
-# print(" Obtaining user data")
-# user_data = []
-# process_user_data(user_data, users, _subreddit)
-# print(" Saving data to: user_" + _output_file + ".json...")
-# save_file("user_" + _output_file, user_data)
+print(" Obtaining user data")
+user_data = []
+process_user_data(user_data, users, _subreddit)
+print(" Saving data to: user_" + _output_file + ".json...")
+save_file("user_" + _output_file, user_data)
 
 print(" Obtaining posts data")
 post_data = []
