@@ -3,8 +3,12 @@ from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
 import argparse
 import json
+from ratelimit import limits, sleep_and_retry
+
 
 # Global vars
+_PERIOD = 5
+_CALLS = 2
 _BASE_URL = "https://old.reddit.com"
 _BASE_URL_USER = _BASE_URL + "/user/"
 
@@ -14,72 +18,11 @@ retries = Retry(total=5, backoff_factor=1, status_forcelist=[429, 500, 502, 503,
 ses.mount("https://", HTTPAdapter(max_retries=retries))
 
 
+@sleep_and_retry
+@limits(calls=_CALLS, period=_PERIOD)
 def make_request(url):  # makes a request using the session configured previously
     res = ses.get(url)
     return BeautifulSoup(res.text, "html.parser")
-
-
-# def scrap_user_posts(
-#     posts, thing, user
-# ):  # Process data from the post published by the user on r/spain
-#     top_matter = thing.find("div", attrs={"class": "top-matter"})
-#     title_all = top_matter.find("a", attrs={"class": "title"})
-#     title = title_all.text
-#     desc = ""
-#     tagline = top_matter.find("p", attrs={"class": "tagline"})
-#     date = tagline.find("time")["title"]
-
-#     pattern = re.compile("/r/spain/.*")
-#     if pattern.match(title_all["href"]):
-#         url_post = "https://old.reddit.com" + title_all["href"]
-
-#         res_post = make_request(url_post)
-#         html_post = BeautifulSoup(res_post.text, "html.parser")
-
-#         expando = html_post.find("div", attrs={"class": "expando"})
-#         if expando != None:
-#             md = expando.find("div", attrs={"class": "md"})
-#             if md != None:
-#                 desc = md.text
-
-#         posts.append(
-#             {
-#                 "title": title,
-#                 "post_url": url_post,
-#                 "date": date,
-#                 "desc": desc,
-#                 "author": user,
-#             }
-#         )
-
-
-# def scrap_user_comments(
-#     comments, thing, user
-# ):  # Process data from the comments published by the user on r/spain
-#     parent = thing.find("p", attrs={"class": "parent"})
-#     if parent != None:
-#         title = parent.find("a", attrs={"class": "title"})
-#         post = title["href"]
-
-#         entry = thing.find("div", attrs={"class": "entry"})
-#         tagline = entry.find("p", attrs={"class": "tagline"})
-#         date = tagline.find("time")["title"]
-
-#         usertext_body = entry.find("div", attrs={"class": "usertext-body"})
-
-#         if usertext_body != None:
-#             md = usertext_body.find("div", attrs={"class": "md"})
-#             if md != None:
-#                 text = md.text
-
-#                 comments.append(
-#                     {
-#                         "text": text,
-#                         "date": date,
-#                         "parent": post,
-#                         "author": user,
-#                     }
-#                 )
 
 
 def obtain_user_posts_comments(
@@ -127,11 +70,90 @@ def process_user_data(
         comments = []
         obtain_user_posts_comments(posts, comments, html, subreddit)
         user_data.append(
-            {"username": user, "karma": karma, "posts": posts, "comments": comments}
+            {
+                "username": user,
+                "karma": karma,
+                "posts": posts,
+                "comments": comments,
+            }
         )
 
 
-def save_file(file, data):
+def process_comment_data(comment_data, comments, post_url):
+    for comment in comments:
+        # Comment URL
+        comment_url = _BASE_URL + comment["data-permalink"]
+
+        # Text
+        text = comment.find("div", attrs={"class": "usertext-body"}).text
+
+        # Date
+        date = comment.find("time")["title"]
+
+        # Author
+        if "data-author" in comment.attrs:
+            author = comment["data-author"]
+        else:
+            author = "Deleted Account"
+
+        comment_data.append(
+            {
+                "comment": comment_url,
+                "text": text,
+                "date": date,
+                "post": post_url,
+                "author": author,
+            }
+        )
+
+
+def process_post_data(post_data, comment_data, posts_list):
+    for post in posts_list:
+        post_url = _BASE_URL + post
+        html = make_request(post_url)
+        siteTable = html.find("div", attrs={"id": "siteTable"})
+        entry = siteTable.find("div", attrs={"class": "entry"})
+
+        if entry != None:
+            # Title
+            title = entry.find("a", attrs={"class": "title"}).text
+
+            # Date
+            date = entry.find("time")["title"]
+
+            # Description
+            usertext = entry.find("div", attrs={"class": "usertext"})
+            if usertext != None:
+                desc = usertext.find("div", attrs={"class": "md"}).text
+            else:
+                desc = ""
+
+            # Author
+            author_class = entry.find("a", attrs={"class": "author"})
+            if author_class != None:
+                author = author_class.text
+            else:
+                author = "Deleted Account"
+
+            post_data.append(
+                {
+                    "post": post_url,
+                    "title": title,
+                    "date": date,
+                    "description": desc,
+                    "author": author,
+                }
+            )
+
+            # Comments
+            commentarea = html.find("div", attrs={"class": "commentarea"})
+            comments_sitetable = commentarea.find("div", attrs={"class": "sitetable"})
+            things = comments_sitetable.findAll("div", attrs={"class": "thing"})
+
+            process_comment_data(comment_data, things, post_url)
+
+
+def save_file(file, data):  # Saves the given data in json format to the given file
     with open(file + ".json", "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=3)
 
@@ -159,7 +181,7 @@ print("Reddit Scrapper")
 print(" Scrapping subreddit: " + _BASE_URL + "/r/" + _subreddit + "/" + _type + "/")
 print(" Outputting data to: data_type" + _output_file + ".json")
 print(
-    "--------------------------------------------------------------------------------------"
+    "---------------------------------------------------------------------------------"
 )
 
 html = make_request(_BASE_URL + "/r/" + _subreddit + "/" + _type + "/")
@@ -181,7 +203,19 @@ for thing in things:
         print("[DEBUG]: tag (data-author) not found -> User account was deleted")
 
 users = list(dict.fromkeys(users))
+posts = list(dict.fromkeys(posts))
 
-user_data = []
-process_user_data(user_data, users, _subreddit)
-save_file("user_" + _output_file, user_data)
+# print(" Obtaining user data")
+# user_data = []
+# process_user_data(user_data, users, _subreddit)
+# print(" Saving data to: user_" + _output_file + ".json...")
+# save_file("user_" + _output_file, user_data)
+
+print(" Obtaining posts data")
+post_data = []
+comment_data = []
+process_post_data(post_data, comment_data, posts)
+print(" Saving posts to: post_" + _output_file + ".json...")
+save_file("post_" + _output_file, post_data)
+print(" Saving comments to: comment_" + _output_file + ".json...")
+save_file("comment_" + _output_file, comment_data)
