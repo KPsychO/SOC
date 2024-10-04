@@ -45,7 +45,7 @@ def obtain_user_karma(
         karma = int(post_karma.replace(",", "")) + int(comment_karma.replace(",", ""))
         return karma
     else:
-        print("[DEBUG]: User account is NSFW, therefore, can´t be scrapped")
+        # print("[DEBUG]: User account is NSFW, therefore, can´t be scrapped")
         return -1
 
 
@@ -68,7 +68,7 @@ def process_user_data(
                 "username": user,
                 "karma": karma,
                 "posts": posts,
-                "comments": comments,
+                "comments": comments
             }
         )
 
@@ -97,7 +97,7 @@ def process_comment_data(comment_data, comments, post_url):
                     "text": text,
                     "date": date,
                     "post": post_url,
-                    "author": author,
+                    "author": author
                 }
             )
 
@@ -132,6 +132,13 @@ def process_post_data(post_data, comment_data, posts_list):
                 else:
                     author = "Deleted Account"
 
+                # # Media
+                # post_link = entry.find("a", attrs={"class":"post-link"})
+                # if post_link != None and 'src' in post_link.attrs:
+                #     media = post_link['src']
+                # else:
+                #     media = ""
+
                 post_data.append(
                     {
                         "post": post_url,
@@ -139,6 +146,7 @@ def process_post_data(post_data, comment_data, posts_list):
                         "date": date,
                         "description": desc,
                         "author": author,
+                        #"media": media
                     }
                 )
 
@@ -159,15 +167,15 @@ def save_file(file, data):  # Saves the given data in json format to the given f
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "-t", "--type", help="Type of scrapping: ['', 'new', 'rising', 'top']"
+    "-t", "--type", help="Type of scrapping: ['', 'new', 'rising', 'top']", default="new"
 )
 parser.add_argument(
-    "-s", "--subreddit", help="Subreddit to scrap: spain, europe, spicypillows..."
+    "-s", "--subreddit", help="Subreddit to scrap: spain, europe, spicypillows...", default="spain"
 )
 parser.add_argument(
     "-o",
     "--output",
-    help="Choose the output file name, will have the following format: user_FILENAME.json",
+    help="Choose the output file name, will have the following format: user_FILENAME.json", default="data"
 )
 
 args = parser.parse_args()
@@ -178,7 +186,7 @@ _output_file = args.output
 
 print("Reddit Scrapper")
 print(" Scrapping subreddit: " + _BASE_URL + "/r/" + _subreddit + "/" + _type + "/")
-print(" Outputting data to: data_type" + _output_file + ".json")
+print(" Outputting data to: " + _output_file +"_data_type.json")
 print(
     "---------------------------------------------------------------------------------"
 )
@@ -193,13 +201,13 @@ posts = []
 for thing in things:
     if "data-permalink" in thing.attrs:
         posts.append(thing["data-permalink"])
-    else:
-        print("[DEBUG]: tag (data-permalink) not found -> ???")
+    # else:
+        # print("[DEBUG]: tag (data-permalink) not found -> ???")
 
     if "data-author" in thing.attrs:
         users.append(thing["data-author"])
-    else:
-        print("[DEBUG]: tag (data-author) not found -> User account was deleted")
+    # else:
+        # print("[DEBUG]: tag (data-author) not found -> User account was deleted")
 
 users = list(dict.fromkeys(users))
 posts = list(dict.fromkeys(posts))
