@@ -19,6 +19,10 @@ def print_info(n_hub, adjacency_list, n_edges, graph_degree_distribution, cluste
     print('number of nodes:     ' + str(len(adjacency_list)))
     print('number of edges:     ' + str(n_edges))
 
+def generate_graphs(n_hub, adjacency_list, n_edges, graph_degree_distribution, cluster_coeficiency_distribution):
+    print('[TODO]: IDK man, use pandas and pyplot or some shit and do cute shit here')
+
+
 @click.command()
 @click.argument('filename')
 @click.argument('n_hub')
@@ -27,6 +31,7 @@ def main(filename, n_hub):
     adjacency_list, n_edges, graph_degree_distribution, cluster_coeficiency_distribution = process_edgelist(filename)
 
     print_info(n_hub, adjacency_list, n_edges, graph_degree_distribution, cluster_coeficiency_distribution)
+    generate_graphs(n_hub, adjacency_list, n_edges, graph_degree_distribution, cluster_coeficiency_distribution)
 
 main()
 
