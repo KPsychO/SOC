@@ -10,8 +10,8 @@ def adjacencylist_from_edgelistFile(filename):
             n_edges+=1
             node1, node2 = map(int, line.strip().split())
             adjacency_list[node1].append(node2)
-            adjacency_list[node2].append(node1)  # Assuming the graph is undirected
-
+            adjacency_list[node2].append(node1) 
+            
     return adjacency_list, n_edges
 
 def cluster_coeficiency_distribution_from_adjacencylist(adjacency_list):
@@ -34,7 +34,6 @@ def graph_degree_distribution_from_adjacencylist(adjacency_list):
     return graph_degree_distribution
 
 def process_edgelist(filename):
-    # Convert the edgelist to adjacency list
     adjacency_list, n_edges = adjacencylist_from_edgelistFile(filename)
     graph_degree_distribution = graph_degree_distribution_from_adjacencylist(adjacency_list)
     cluster_coeficiency_distribution = cluster_coeficiency_distribution_from_adjacencylist(adjacency_list)
