@@ -26,6 +26,7 @@ def make_request(url):  # makes a request using the session configured previousl
     else:
         return False
 
+
 def create_cache(html_gr):
     dir_cache = "cache/"
     Path("./" + dir_cache).mkdir(parents=True, exist_ok=True)
